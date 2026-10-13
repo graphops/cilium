@@ -12,12 +12,12 @@
 
 #include <bpf/ctx/skb.h>
 #include <bpf/api.h>
+#define ENABLE_IPV6
+#define LB_DEFAULT_ALG LB_SELECTION_MAGLEV
 #include "svc_icmp_pmtu_relay_common.h"
 
-#define ENABLE_IPV6
 #include <bpf/config/global.h>
 
-#define LB_DEFAULT_ALG LB_SELECTION_MAGLEV
 
 #include "nodeport_defaults.h"
 #undef LB_MAGLEV_LUT_SIZE
@@ -67,22 +67,22 @@ int svc_icmp_pmtu_relay_dsr_v6_pktgen(struct __ctx_buff *ctx)
 	struct pktgen builder;
 	struct ipv6hdr *ip6;
 	struct icmp6hdr *icmp6;
-	struct ipv6hdr inner_ip6 = {
+	struct ipv6hdr inner_ip6 __align_stack_8 = {
 		.version = 6,
 		.payload_len = bpf_htons(sizeof(struct tcphdr)),
 		.nexthdr = IPPROTO_TCP,
 		.hop_limit = 64,
 	};
-	struct tcphdr inner_tcp = {
+	struct tcphdr inner_tcp __align_stack_8 = {
 		.source = SVC_PORT,
 		.dest = CLIENT_PORT,
 		.doff = 5,
 	};
-	struct icmp6hdr icmp6_hdr = {
+	struct icmp6hdr icmp6_hdr __align_stack_8 = {
 		.icmp6_type = ICMPV6_PKT_TOOBIG,
 		.icmp6_mtu = bpf_htonl(1400),
 	};
-	struct ipv6hdr outer = {};
+	struct ipv6hdr outer __align_stack_8 = {};
 
 	ipv6_addr_copy((union v6addr *)&inner_ip6.saddr, &vip);
 	ipv6_addr_copy((union v6addr *)&inner_ip6.daddr, &client);
