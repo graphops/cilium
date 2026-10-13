@@ -14,6 +14,7 @@
 
 #include "common.h"
 #include "pktgen.h"
+#include <lib/ipv6.h>
 
 /* The relay only compiles into the host/XDP programs. */
 #define IS_BPF_HOST
@@ -109,19 +110,19 @@ pmtu_test_pktgen_icmp4(struct __ctx_buff *ctx, __be32 router, __be32 vip,
 {
 	struct pktgen builder;
 	struct icmphdr *icmp;
-	struct iphdr inner_ip = {
+	struct iphdr inner_ip __align_stack_8 = {
 		.version = 4,
 		.ihl = 5,
 		.protocol = IPPROTO_TCP,
 		.saddr = vip,
 		.daddr = client,
 	};
-	struct tcphdr inner_tcp = {
+	struct tcphdr inner_tcp __align_stack_8 = {
 		.source = svc_port,
 		.dest = client_port,
 		.doff = 5,
 	};
-	struct icmphdr icmp_hdr = {
+	struct icmphdr icmp_hdr __align_stack_8 = {
 		.type = ICMP_DEST_UNREACH,
 		.code = ICMP_FRAG_NEEDED,
 		.un = { .frag = { .mtu = bpf_htons(1400) } },

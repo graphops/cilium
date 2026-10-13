@@ -213,16 +213,17 @@ handle_icmp_svc_pmtu_v4(struct __ctx_buff *ctx, struct iphdr *ip4, int l4_off)
 	 * is cancelled by the inner IP checksum). Matches
 	 * snat_v4_rev_nat_handle_icmp_error(). */
 	if (inner.protocol == IPPROTO_UDP) {
-		if (udp_load_csum(ctx, (int)icmp_l4_off, &l4_csum) < 0)
+		if (ctx_load_bytes(ctx, (int)icmp_l4_off + offsetof(struct udphdr, check),
+				   &l4_csum, sizeof(l4_csum)) < 0)
 			return DROP_INVALID;
 		if (l4_csum == 0)
 			has_inner_l4_csum = false;
 	}
 
-	outer_csum_diff = snat_v4_calc_icmp_error_csum_diff(inner.saddr,
+	snat_v4_calc_icmp_error_csum_diff(inner.saddr,
 							    backend->address,
 							    ports[0], backend->port,
-							    has_inner_l4_csum);
+							    has_inner_l4_csum, &outer_csum_diff);
 
 	/* (1) Rewrite the embedded packet. */
 	ret = snat_v4_rewrite_headers(ctx, inner.protocol, (int)inner_l3_off,
@@ -338,7 +339,8 @@ handle_icmp_svc_pmtu_v6(struct __ctx_buff *ctx, struct ipv6hdr *ip6, int l4_off)
 	 * leave it to the stack. Likewise when the error embeds only the first 8
 	 * L4 bytes: the embedded TCP checksum is absent. */
 	if (inner_nexthdr == IPPROTO_UDP) {
-		if (udp_load_csum(ctx, (int)icmp_l4_off, &l4_csum) < 0)
+		if (ctx_load_bytes(ctx, (int)icmp_l4_off + offsetof(struct udphdr, check),
+				   &l4_csum, sizeof(l4_csum)) < 0)
 			return DROP_INVALID;
 		if (l4_csum == 0)
 			return CTX_ACT_OK;
@@ -385,7 +387,7 @@ handle_icmp_svc_pmtu_v6(struct __ctx_buff *ctx, struct ipv6hdr *ip6, int l4_off)
 	ret = snat_v6_rewrite_headers(ctx, inner_nexthdr, (int)inner_l3_off, true,
 				      (int)icmp_l4_off, &key.address, &backend_addr,
 				      IPV6_SADDR_OFF, ports[0], backend->port,
-				      TCP_SPORT_OFF, 0);
+				      TCP_SPORT_OFF);
 	if (IS_ERR(ret))
 		return ret;
 
@@ -394,7 +396,7 @@ handle_icmp_svc_pmtu_v6(struct __ctx_buff *ctx, struct ipv6hdr *ip6, int l4_off)
 	 * stack value. */
 	ret = snat_v6_rewrite_headers(ctx, IPPROTO_ICMPV6, ETH_HLEN, true, l4_off,
 				      &key.address, &backend_addr, IPV6_DADDR_OFF,
-				      0, 0, 0, 0);
+				      0, 0, 0);
 	if (IS_ERR(ret))
 		return ret;
 

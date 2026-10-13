@@ -18,12 +18,12 @@
 
 #include <bpf/ctx/skb.h>
 #include <bpf/api.h>
+#define ENABLE_IPV4
+#define LB_DEFAULT_ALG LB_SELECTION_MAGLEV
 #include "svc_icmp_pmtu_relay_common.h"
 
-#define ENABLE_IPV4
 #include <bpf/config/global.h>
 
-#define LB_DEFAULT_ALG LB_SELECTION_MAGLEV
 
 #include "nodeport_defaults.h"
 #undef LB_MAGLEV_LUT_SIZE
