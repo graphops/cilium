@@ -220,10 +220,13 @@ handle_icmp_svc_pmtu_v4(struct __ctx_buff *ctx, struct iphdr *ip4, int l4_off)
 			has_inner_l4_csum = false;
 	}
 
-	snat_v4_calc_icmp_error_csum_diff(inner.saddr,
+	/* 1.20.5 returns the diff instead of writing it through a pointer.
+	 * Upstream callers also zero it for inner ICMP/SCTP; the relay only
+	 * admits inner TCP/UDP (checked above), so that case cannot occur. */
+	outer_csum_diff = snat_v4_calc_icmp_error_csum_diff(inner.saddr,
 							    backend->address,
 							    ports[0], backend->port,
-							    has_inner_l4_csum, &outer_csum_diff);
+							    has_inner_l4_csum);
 
 	/* (1) Rewrite the embedded packet. */
 	ret = snat_v4_rewrite_headers(ctx, inner.protocol, (int)inner_l3_off,

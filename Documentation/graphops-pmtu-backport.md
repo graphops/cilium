@@ -29,9 +29,18 @@ The two socket-LB termination fixes that matter on k-work:
   is initialized, and align packet-generator stack structures for the verifier.
 
 Upstream changed `bpf/lib/lb.h` and `bpf/lib/nodeport.h` between 1.20.2 and 1.20.5,
-and the relay also touches both. The merge was clean, but the eBPF unit tests
-(including `svc_icmp_pmtu_relay*`) and the verifier complexity checks must pass
-on this branch before an image ships.
+and the relay also touches both. The merge was clean, but one call site broke.
+
+- 1.20.5 changed `snat_v4_calc_icmp_error_csum_diff()` in `bpf/lib/nat.h` to return
+  the `__wsum` diff instead of writing it through an output pointer.
+- The IPv4 relay in `bpf/lib/pmtu.h` now takes the return value. The semantics are
+  the same: the diff starts at zero and is computed the same way.
+- Upstream's own callers also zero the diff for inner ICMP or SCTP. The relay only
+  admits inner TCP and UDP, so it doesn't need that guard.
+
+The eBPF unit suite passed on this branch (22 Nov 2026): 145 test objects and 712
+scenarios, including `svc_icmp_pmtu_relay.o` and `svc_icmp_pmtu_relay6.o`, built
+with the pinned 1.20.5 builder image.
 
 ## Build
 
